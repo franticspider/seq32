@@ -20,6 +20,8 @@
 
 
 #include "lfownd.h"
+#include <stdio.h>  //for randfrom only
+#include <stdlib.h> //for randfrom only
 #include <string>
 #include <math.h>
 #include <sigc++/slot.h>
@@ -30,6 +32,19 @@ using sigc::mem_fun;
 #define PI (3.14159265359)
 
 
+/* generate a random floating point number from min to max */
+double randfrom(double min, double max) 
+{
+    double range = (max - min); 
+    double div = RAND_MAX / range;
+    return min + (rand() / div);
+}
+
+
+
+/*
+return: double in range [+1,1], as indicated by the WAVE_SINE calculation...
+*/
 double lfownd::wave_func(double a_angle, int wave_type)
 {
     double result = 0.0;
@@ -57,6 +72,9 @@ double lfownd::wave_func(double a_angle, int wave_type)
         result = result * 2.0 - 1.0;
         break;
     }
+    case WAVE_RANDOM:
+    	result = randfrom(-1.0,1.0);
+    	break;
     default:
         break;
     }

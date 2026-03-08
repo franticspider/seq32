@@ -32,7 +32,8 @@ enum wave_type_t
     WAVE_SINE               = 1,    /**< Sine wave modulation.              */
     WAVE_SAWTOOTH           = 2,    /**< Saw-tooth (ramp) modulation.       */
     WAVE_REVERSE_SAWTOOTH   = 3,    /**< Reverse saw-tooth (decay).         */
-    WAVE_TRIANGLE           = 4     /**< No waveform, never used.           */
+    WAVE_TRIANGLE           = 4,    /**< No waveform, never used.           */
+    WAVE_RANDOM             = 5     /**< Random value in range              */ 
 };
 
 class lfownd: public Gtk::Window

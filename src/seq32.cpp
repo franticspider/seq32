@@ -21,6 +21,15 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+//#define NCURSES_NOMACROS
+#include <ncurses.h>
+#undef scroll
+#undef OK
+#undef ERR
+#undef COLOR_BLACK
+#undef COLOR_WHITE
+#undef timeout
+#include <gtkmm.h>
 
 #ifndef CMAKE_BUILD_SUPPORT
 #ifdef __WIN32__
@@ -110,6 +119,7 @@ static struct
     {"pass_sysex", 0, 0, 'P'},
     {"version", 0, 0, 'v'},
     {"client_name", required_argument, 0, 'n'},
+    {"terminal", 0, 0, 't'},
     {0, 0, 0, 0}
 
 };
@@ -138,6 +148,7 @@ bool global_with_jack_master = false;
 bool global_with_jack_master_cond = false;
 bool global_song_start_mode = false;
 bool playlist_mode = false;
+bool terminal_only = false;
 
 Glib::ustring global_jack_session_uuid = "";
 
@@ -216,6 +227,7 @@ main (int argc, char *argv[])
             printf( "                                              (1 = song mode) (default)\n" );
             printf( "   -n, --client_name <name>: Set alsa client name: Default = seq32\n");
             printf( "   -S, --stats: show statistics\n" );
+            printf( "   -t, --terminal: run in terminal without GUI (WARNING: EXPERIMENTAL!)\n");
             printf( "   -U, --jack_session_uuid <uuid>: set uuid for jack session\n" );
             printf( "\n\n\n" );
 
@@ -277,6 +289,11 @@ main (int argc, char *argv[])
             /* ignore alsa device */
             global_device_ignore = true;
             global_device_ignore_num = atoi( optarg );
+            break;
+
+        case 't':
+            printf("LAUNCHING SEQ32 IN TERMINAL MODE...\n");
+       	    terminal_only = true;
             break;
 
         case 'v':
@@ -377,111 +394,130 @@ main (int argc, char *argv[])
 
     p_font_renderer = new font();
 
-    application = Gtk::Application::create();
-    mainwnd seq32_window( &p, application );
+    int status = 0;
+
+    if(terminal_only){
+
+        printf("Launching ncurses...\n");
+        /*
+        initscr();            // start curses mode
+        cbreak();             // disable line buffering
+        noecho();             // don't echo keypresses
+
+        printw("Hello ncurses!");
+        refresh();
+
+        getch();              // wait for keypress
+        endwin();             // restore terminal
+        return 0;
+        */
+        
+    }else{
+	    application = Gtk::Application::create();
+	    mainwnd seq32_window( &p, application );
 
 #ifdef NSM_SUPPORT
-    if ( nsm_url )
-    {
-        // Set the save callback and nsm client now that the mainwnd is created.
-        nsm_set_save_callback( nsm, cb_nsm_save, (void*) &seq32_window );
-        if (nsm_opional_gui_support)
-        {
-            nsm_set_show_callback(nsm, nsm_show_cb, 0);
-            nsm_set_hide_callback(nsm, nsm_hide_cb, 0);
-            if (!global_nsm_gui) nsm_hide_cb(0);
-            else nsm_send_is_shown(nsm);
-        } 
-        else 
-        {
-            global_nsm_gui = true;
-        }
-        
-        // set client and limited file menus
-        seq32_window.set_nsm_client(nsm, nsm_opional_gui_support);
-        
-        // Open the NSM session file
-        if (Glib::file_test(global_filename, Glib::FILE_TEST_EXISTS))
-        {
-            seq32_window.open_file(global_filename);
-        }
-        else    // file does not exists, so create it.
-        {
-            seq32_window.file_save();
-            seq32_window.update_window_title();
-        }
-        
-        // Bind sigterm handler
-        signal(SIGTERM, [](int /* param */)
-        {
-            global_is_running = false;
-            application->quit();
-        });
-    }
+	    if ( nsm_url )
+	    {
+		// Set the save callback and nsm client now that the mainwnd is created.
+		nsm_set_save_callback( nsm, cb_nsm_save, (void*) &seq32_window );
+		if (nsm_opional_gui_support)
+		{
+		    nsm_set_show_callback(nsm, nsm_show_cb, 0);
+		    nsm_set_hide_callback(nsm, nsm_hide_cb, 0);
+		    if (!global_nsm_gui) nsm_hide_cb(0);
+		    else nsm_send_is_shown(nsm);
+		} 
+		else 
+		{
+		    global_nsm_gui = true;
+		}
+		
+		// set client and limited file menus
+		seq32_window.set_nsm_client(nsm, nsm_opional_gui_support);
+		
+		// Open the NSM session file
+		if (Glib::file_test(global_filename, Glib::FILE_TEST_EXISTS))
+		{
+		    seq32_window.open_file(global_filename);
+		}
+		else    // file does not exists, so create it.
+		{
+		    seq32_window.file_save();
+		    seq32_window.update_window_title();
+		}
+		
+		// Bind sigterm handler
+		signal(SIGTERM, [](int /* param */)
+		{
+		    global_is_running = false;
+		    application->quit();
+		});
+	    }
 #endif // NSM_SUPPORT
 
     // Do not use command line file if in NSM session
 #ifdef NSM_SUPPORT
-    if(!nsm)
-    {
+	    if(!nsm)
+	    {
 #endif
-        if (optind < argc)
-        {
-            if (Glib::file_test(argv[optind], Glib::FILE_TEST_EXISTS))
-                seq32_window.open_file(argv[optind]);
-            else
-                printf("File not found: %s\n", argv[optind]);
-        }
+		if (optind < argc)
+		{
+		    if (Glib::file_test(argv[optind], Glib::FILE_TEST_EXISTS))
+		        seq32_window.open_file(argv[optind]);
+		    else
+		        printf("File not found: %s\n", argv[optind]);
+		}
 
-        if(playlist_mode)
-        {
-            p.set_playlist_mode(playlist_mode);
-            p.set_playlist_file(playlist_file);
+		if(playlist_mode)
+		{
+		    p.set_playlist_mode(playlist_mode);
+		    p.set_playlist_file(playlist_file);
 
-            if(p.get_playlist_mode())    // true means file load with no errors
-            {
-                if(seq32_window.verify_playlist_dialog())
-                {
-                    seq32_window.playlist_verify();
-                }
-                else
-                {
-                    seq32_window.playlist_jump(PLAYLIST_ZERO);
-                }
-            }
-        }
+		    if(p.get_playlist_mode())    // true means file load with no errors
+		    {
+		        if(seq32_window.verify_playlist_dialog())
+		        {
+		            seq32_window.playlist_verify();
+		        }
+		        else
+		        {
+		            seq32_window.playlist_jump(PLAYLIST_ZERO);
+		        }
+		    }
+		}
 #ifdef NSM_SUPPORT
-    }
+    	}
 #endif
     
-    int status = 0;
-    status = application->run(seq32_window);
+	    status = application->run(seq32_window);
 
-    p.deinit_jack();
+	    p.deinit_jack();
 
-    if ( getenv( HOME ) != NULL )
-    {
-        string home( getenv( HOME ));
-        Glib::ustring total_file = home + SLASH + config_filename;
-        printf( "Writing [%s]\n", total_file.c_str());
+	    if ( getenv( HOME ) != NULL )
+	    {
+		string home( getenv( HOME ));
+		Glib::ustring total_file = home + SLASH + config_filename;
+		printf( "Writing [%s]\n", total_file.c_str());
 
-        optionsfile options( total_file );
+		optionsfile options( total_file );
 
-        if (!options.write( &p))
-            printf( "Error writing [%s]\n", total_file.c_str());
-    }
-    else
-    {
-        printf( "Error calling getenv( \"%s\" )\n", HOME );
-    }
+		if (!options.write( &p))
+		    printf( "Error writing [%s]\n", total_file.c_str());
+	    }
+	    else
+	    {
+		printf( "Error calling getenv( \"%s\" )\n", HOME );
+	    }
 
 #ifdef NSM_SUPPORT
-    if(nsm)
-    {
-        nsm_free( nsm );
-        nsm = NULL;
-    }
+	    if(nsm)
+	    {
+		nsm_free( nsm );
+		nsm = NULL;
+	    }
 #endif
 
+    }
     return status;
 }

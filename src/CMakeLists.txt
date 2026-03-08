@@ -38,6 +38,7 @@ set (ProgSources
 
 
 set(ExternLibraries
+    ncurses
     ${GTKMM_LINK_LIBRARIES}
     ${ALSA_LIBRARIES}
     ${JACK_LINK_LIBRARIES}
