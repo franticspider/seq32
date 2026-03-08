@@ -194,7 +194,7 @@ main (int argc, char *argv[])
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "Chi:jJkmM:pPsSU:vx:X:n:", long_options,
+        c = getopt_long(argc, argv, "Chi:jJkmM:pPsStU:vx:X:n:", long_options,
                         &option_index);
 
         /* Detect the end of the options. */
@@ -399,7 +399,7 @@ main (int argc, char *argv[])
     if(terminal_only){
 
         printf("Launching ncurses...\n");
-        /*
+        
         initscr();            // start curses mode
         cbreak();             // disable line buffering
         noecho();             // don't echo keypresses
@@ -410,7 +410,7 @@ main (int argc, char *argv[])
         getch();              // wait for keypress
         endwin();             // restore terminal
         return 0;
-        */
+         
         
     }else{
 	    application = Gtk::Application::create();
