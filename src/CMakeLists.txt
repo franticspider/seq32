@@ -9,6 +9,7 @@ set (ProgSources
     keybindentry.cpp
     lfownd.cpp
     maintime.cpp
+    mainterm.cpp
     mainwid.cpp
     mainwnd.cpp
     midibus.cpp

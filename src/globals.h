@@ -199,7 +199,7 @@ extern bool global_solo_track_set;
 
 /*
     global_is_running:
-    initialize in mainwnd.cpp = false:
+    used to be initialized in mainwnd.cpp = false:
     set in perform::inner_start() = true:
     set in perform::inner_stop() = false:
     This should not be reset under any other circumstance!

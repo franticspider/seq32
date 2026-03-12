@@ -38,8 +38,8 @@
 #include "pixmaps/seq32_playlist.xpm"
 #include "pixmaps/menu.xpm"
 
-bool global_is_running = false;
-bool global_is_modified = false;
+extern bool global_is_running;
+extern bool global_is_modified;
 
 #define add_tooltip( obj, text ) obj->set_tooltip_text( text);
 

@@ -41,6 +41,8 @@
 
 #include "font.h"
 #include "mainwnd.h"
+#include "mainterm.h"
+
 #include "midifile.h"
 #include "optionsfile.h"
 #include "perform.h"
@@ -58,6 +60,11 @@ bool global_nsm_gui = false;
 bool nsm_opional_gui_support = true;
 static nsm_client_t *nsm = 0;
 static int wait_nsm = 1;
+
+
+
+bool global_is_running = false;
+bool global_is_modified = false;
 
 void
 nsm_hide_cb(void * /* userdata */)
@@ -86,7 +93,10 @@ cb_nsm_open ( const char *save_file_path,   // See API Docs 2.2.2
     wait_nsm = 0;
     return ERR_OK;
 }                                                                    
-                                                                     
+
+
+
+                                                                  
 int
 cb_nsm_save ( char **,  void *userdata)
 {
@@ -96,6 +106,9 @@ cb_nsm_save ( char **,  void *userdata)
     return ERR_OK;
 }                                                          
 #endif  // NSM_SUPPORT
+
+
+
 
 /* struct for command parsing */
 static struct
@@ -124,6 +137,9 @@ static struct
 
 };
 
+
+
+
 static const char versiontext[] = PACKAGE " " VERSION "\n";
 
 bool global_manual_alsa_ports = true;
@@ -147,8 +163,6 @@ bool global_with_jack_transport = false;
 bool global_with_jack_master = false;
 bool global_with_jack_master_cond = false;
 bool global_song_start_mode = false;
-bool playlist_mode = false;
-bool terminal_only = false;
 
 Glib::ustring global_jack_session_uuid = "";
 
@@ -166,9 +180,15 @@ font *p_font_renderer;
 #   define SLASH "/"
 #endif
 
+
+
+
 int
 main (int argc, char *argv[])
 {
+    bool playlist_mode = false;
+    bool terminal_only = false;
+
     /* Scan the argument vector and strip off all parameters known to
      * GTK+. */
     Gtk::Main kit(argc, argv);
@@ -398,6 +418,9 @@ main (int argc, char *argv[])
 
     if(terminal_only){
 
+        mainterm seq32_term( &p);
+
+
         printf("Launching ncurses...\n");
         
         initscr();            // start curses mode
@@ -405,6 +428,26 @@ main (int argc, char *argv[])
         noecho();             // don't echo keypresses
 
         printw("Hello ncurses!");
+        
+		if(playlist_mode)
+		{
+		    p.set_playlist_mode(playlist_mode);
+		    p.set_playlist_file(playlist_file);
+
+		    if(p.get_playlist_mode())    // true means file load with no errors
+		    {
+		        //if(seq32_term.verify_playlist_dialog())
+		            seq32_term.playlist_verify();
+		        //}
+		        //else
+		        //{
+		        //    seq32_window.playlist_jump(PLAYLIST_ZERO);
+		        //}
+		    }
+		}
+        
+        
+        
         refresh();
 
         getch();              // wait for keypress
