@@ -193,7 +193,8 @@ bool mainterm::playlist_jump(int jmp, bool a_verify)
                 {
                     Glib::ustring message = "Playlist file open error\n";
                     message += m_mainperf->get_playlist_current_file();
-                    m_mainperf->error_message_gtk(message);
+                    //m_mainperf->error_message_gtk(message);
+                     printf("%s\n",std::string(message).c_str());
                     m_mainperf->set_playlist_mode(false);    // abandon ship
                     result = false;
                     break;  
@@ -203,7 +204,8 @@ bool mainterm::playlist_jump(int jmp, bool a_verify)
             {
                 Glib::ustring message = "Midi playlist file does not exist\n";
                 message += m_mainperf->get_playlist_current_file();
-                m_mainperf->error_message_gtk(message);
+                //m_mainperf->error_message_gtk(message);
+                	printf("%s\n",std::string(message).c_str());
                 m_mainperf->set_playlist_mode(false);        // abandon ship
                 result = false;
                 break;  
