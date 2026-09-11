@@ -57,6 +57,7 @@ seqroll::seqroll(perform *a_perf,
     m_scale(0),
     m_chord(0),
     m_key(0),
+    m_scale_lock(false),
 
     m_key_y(c_key_y),
     m_rollarea_y(c_rollarea_y),
@@ -574,6 +575,25 @@ seqroll::set_key( int a_key )
     }
 }
 
+bool
+seqroll::is_note_in_scale( int a_note ) const
+{
+    if ( m_scale == c_scale_off )
+        return true;
+
+    int pitch_class = (a_note - m_key) % 12;
+
+    if ( pitch_class < 0 )
+        pitch_class += 12;
+
+    return c_scales_policy[m_scale][pitch_class];
+}
+
+void
+seqroll::set_scale_lock( bool a_state )
+{
+    m_scale_lock = a_state;
+}
 
 /* draws background surface on main surface,
    then puts the events on */
@@ -1209,6 +1229,15 @@ seqroll::on_focus_out_event(GdkEventFocus*)
 bool
 seqroll::on_key_press_event(GdkEventKey* a_p0)
 {
+    if (a_p0->keyval == GDK_KEY_Alt_L ||
+        a_p0->keyval == GDK_KEY_Alt_R)
+    {
+        m_fruity_interaction.m_alt_resize = true;
+        m_fruity_interaction.updateMousePtr(*this);
+        return true;
+    }
+
+
     bool ret = false;
 
     // the start/end key may be the same key (i.e. SPACEBAR)
@@ -1403,6 +1432,20 @@ seqroll::on_key_press_event(GdkEventKey* a_p0)
     return false;
 }
 
+bool
+seqroll::on_key_release_event(GdkEventKey* a_p0)
+{
+    if (a_p0->keyval == GDK_KEY_Alt_L ||
+        a_p0->keyval == GDK_KEY_Alt_R)
+    {
+        m_fruity_interaction.m_alt_resize = false;
+        m_fruity_interaction.updateMousePtr(*this);
+        return true;
+    }
+
+    return false;
+}
+
 void
 seqroll::set_data_type( unsigned char a_status, unsigned char a_control = 0 )
 {
@@ -1472,11 +1515,18 @@ void FruitySeqRollInput::updateMousePtr(seqroll& ths)
         {
             long handle_size = clamp( c_handlesize, 0, (end-start)/3 );
 
-            if (start <= drop_tick && drop_tick <= start + handle_size)
+            if (m_alt_resize)
+            {
+                /* ALT held: resize from the right-hand edge regardless
+                   of where within the note the mouse is positioned. */
+                ths.get_window()->set_cursor(
+                    Gdk::Cursor::create(ths.get_window()->get_display(), Gdk::LEFT_PTR ));
+            }
+            else if (start <= drop_tick && drop_tick <= start + handle_size)
             {
                 ths.get_window()->set_cursor(Gdk::Cursor::create(ths.get_window()->get_display(),  Gdk::CENTER_PTR ));
             }
-            else if (end - handle_size <= drop_tick && drop_tick <= end)
+            else if (m_alt_resize || end - handle_size <= drop_tick && drop_tick <= end)
             {
                 ths.get_window()->set_cursor(Gdk::Cursor::create(ths.get_window()->get_display(),  Gdk::LEFT_PTR ));
             }
@@ -1546,6 +1596,11 @@ bool FruitySeqRollInput::on_button_press_event(GdkEventButton* a_ev, seqroll& th
                     tick_s, note_h,
                     sequence::e_would_select ) &&
                     !(a_ev->state & GDK_CONTROL_MASK) )
+            //if ( m_canadd && ! ths.m_seq->select_note_events( tick_s, note_h,
+            //    tick_s, note_h,
+            //    sequence::e_would_select ) &&
+            //    !(a_ev->state & GDK_CONTROL_MASK) &&
+            //    (!ths.m_scale_lock || ths.is_note_in_scale(note_h)) )        
             {
                 /* start the paint job */
                 ths.m_painting = true;
@@ -1568,7 +1623,12 @@ bool FruitySeqRollInput::on_button_press_event(GdkEventButton* a_ev, seqroll& th
 
                     if(ths.m_chord == 0) // single note
                     {
-                        ths.m_seq->add_note( tick_s, ths.m_note_length - c_note_off_margin, note_h, true );
+                        if ( !ths.m_scale_lock || ths.is_note_in_scale(note_h) )
+                            {
+                                ths.m_seq->add_note( tick_s,
+                                                     ths.m_note_length - c_note_off_margin,
+                                                     note_h, true );
+                            }
                     }
                     else                 // chords
                     {
@@ -1661,7 +1721,9 @@ bool FruitySeqRollInput::on_button_press_event(GdkEventButton* a_ev, seqroll& th
                     }
 
                     // grab/move the note
-                    if ( center_mouse_handle && !(a_ev->state & GDK_CONTROL_MASK) )
+                    if ( center_mouse_handle &&
+                         !(a_ev->state & GDK_CONTROL_MASK) &&
+                         !(a_ev->state & GDK_MOD1_MASK) )
                     {
                         ths.m_seqkeys_wid->set_listen_button_press(a_ev); // play note
 
@@ -1700,12 +1762,16 @@ bool FruitySeqRollInput::on_button_press_event(GdkEventButton* a_ev, seqroll& th
                         //printf( "start: %lf  %lf\n", a_ev->x, a_ev->y );
                     }
 
-                    /* left click on the right handle - grow/resize event  */
-                    if ( (right_mouse_handle &&
-                            a_ev->button == 1 && ! (a_ev->state & GDK_CONTROL_MASK)) ||
-                            a_ev->button == 2 )
+                    /* left click on the right handle, or ALT-click anywhere
+                       on a note - grow/resize event */
+                    if ( ((right_mouse_handle ||
+                           (a_ev->state & GDK_MOD1_MASK)) &&
+                          a_ev->button == 1 &&
+                          !(a_ev->state & GDK_CONTROL_MASK)) ||
+                         a_ev->button == 2 )
                     {
                         ths.m_growing = true;
+                        m_alt_resize = (a_ev->state & GDK_MOD1_MASK) != 0;
 
                         /* get the box that selected elements are in */
                         ths.m_seq->get_selected_box( &tick_s, &note_h,
@@ -1930,6 +1996,8 @@ bool FruitySeqRollInput::on_button_release_event(GdkEventButton* a_ev, seqroll& 
     ths.m_paste = false;
     ths.m_moving_init = false;
     ths.m_painting = false;
+    m_alt_resize = false;
+    updateMousePtr(ths);
 
     ths.m_seq->unpaint_all();
 
@@ -1949,6 +2017,10 @@ bool FruitySeqRollInput::on_motion_notify_event(GdkEventMotion* a_ev, seqroll& t
 {
     ths.m_current_x = (int) (a_ev->x  + ths.m_scroll_offset_x );
     ths.m_current_y = (int) (a_ev->y  + ths.m_scroll_offset_y );
+    /* ALT changes the note interaction to resize mode. */
+    if (!ths.m_growing && !ths.m_moving && !ths.m_selecting)
+        m_alt_resize = (a_ev->state & GDK_MOD1_MASK) != 0;
+
 
     int note;
     long tick;
@@ -2004,7 +2076,14 @@ bool FruitySeqRollInput::on_motion_notify_event(GdkEventMotion* a_ev, seqroll& t
         ths.snap_x( &ths.m_current_x );
         ths.convert_xy( ths.m_current_x, ths.m_current_y, &tick, &note );
 
-        ths.m_seq->add_note( tick, ths.m_note_length - c_note_off_margin, note, true );
+        //ths.m_seq->add_note( tick, ths.m_note_length - c_note_off_margin, note, true );
+        if ( !ths.m_scale_lock || ths.is_note_in_scale(note) )
+        {
+            ths.m_seq->add_note( tick,
+                                 ths.m_note_length - c_note_off_margin,
+                                 note,
+                                 true );
+        }
 
         ths.m_seqkeys_wid->set_listen_motion_notify(a_ev);//  play note
 
@@ -2096,7 +2175,8 @@ bool Seq32SeqRollInput::on_button_press_event(GdkEventButton* a_ev, seqroll& ths
             /* turn x,y in to tick/note */
             ths.convert_xy( ths.m_drop_x, ths.m_drop_y, &tick_s, &note_h );
 
-            if ( m_adding )
+            if ( m_adding)  // &&
+                            //(!ths.m_scale_lock || ths.is_note_in_scale(note_h)) )
             {
                 /* start the paint job */
                 ths.m_painting = true;
@@ -2386,7 +2466,14 @@ bool Seq32SeqRollInput::on_motion_notify_event(GdkEventMotion* a_ev, seqroll& th
         ths.snap_x( &ths.m_current_x );
         ths.convert_xy( ths.m_current_x, ths.m_current_y, &tick, &note );
 
-        ths.m_seq->add_note( tick, ths.m_note_length - c_note_off_margin, note, true );
+        //ths.m_seq->add_note( tick, ths.m_note_length - c_note_off_margin, note, true );
+        if ( !ths.m_scale_lock || ths.is_note_in_scale(note) )
+        {
+            ths.m_seq->add_note( tick,
+                                 ths.m_note_length - c_note_off_margin,
+                                 note,
+                                 true );
+        }
 
         ths.m_seqkeys_wid->set_listen_motion_notify(a_ev);//  play note
 

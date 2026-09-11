@@ -123,6 +123,7 @@ private:
     Button      *m_button_redo;
     Button      *m_button_quanize;
     CheckButton *m_check_transposable;
+    CheckButton *m_check_scale_lock;
 
     Button      *m_button_tools;
 
@@ -246,6 +247,7 @@ private:
 
     void measures_button_callback( int a_length_measures );
     void transposable_change_callback(CheckButton *a_button);
+    void scale_lock_change_callback(CheckButton *a_button);
     void midi_channel_button_callback( int a_midichannel );
     void midi_bus_button_callback( int a_midibus );
     void name_change_callback();

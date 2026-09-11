@@ -1,4 +1,3 @@
-//----------------------------------------------------------------------------
 //
 //  This file is part of seq32.
 //
@@ -1089,6 +1088,16 @@ seqedit::fill_top_bar()
     m_entry_scale->set_editable( false );
     m_hbox2->pack_start( *m_button_scale, false, false );
     m_hbox2->pack_start( *m_entry_scale, true, true );
+    
+    /*Scale Lock*/
+    m_check_scale_lock = manage( new CheckButton("Scale Lock") );
+    m_check_scale_lock->set_active(false);
+    m_check_scale_lock->signal_toggled().connect(
+        bind(mem_fun(*this, &seqedit::scale_lock_change_callback),
+             m_check_scale_lock));
+    add_tooltip( m_check_scale_lock,
+                 "Prevent entry of notes outside the selected scale." );
+    m_hbox2->pack_start( *m_check_scale_lock, false, false, 4 );
 
     /* music chord */
     m_button_chord = manage( new Button());
@@ -1401,6 +1410,12 @@ seqedit::transposable_change_callback(CheckButton *a_button)
 {
     m_seq->set_transposable(a_button->get_active());
     global_is_modified = true;
+}
+
+void
+seqedit::scale_lock_change_callback(CheckButton *a_button)
+{
+    m_seqroll_wid->set_scale_lock(a_button->get_active());
 }
 
 void

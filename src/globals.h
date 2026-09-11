@@ -251,6 +251,9 @@ enum c_music_scales
     c_scale_harmonic_minor,
     c_scale_melodic_minor,
     c_scale_c_whole_tone,
+    c_scale_major_pentatonic,
+    c_scale_minor_pentatonic,
+    
     c_scale_size            // a "maximum" or "size of set" value.
 };
 
@@ -280,6 +283,14 @@ const bool c_scales_policy[c_scale_size][12] =
         true, false, true, false, true, false,
         true, false, true, false, true, false
     },
+    {                                                       /* major pentatonic */
+        true, false, true, false, true, false,
+        false, true, false, true, false, false
+    },
+    {                                                       /* minor pentatonic */
+    true, false, false, true, false, true,
+    false, true, false, false, true, false
+    },
 };
 
 const int c_scales_transpose_up[c_scale_size][12] =
@@ -290,6 +301,8 @@ const int c_scales_transpose_up[c_scale_size][12] =
     { 2, 0, 1, 2, 0, 2, 0, 1, 3, 0, 0, 1},              /* harmonic minor  */
     { 2, 0, 1, 2, 0, 2, 0, 2, 0, 2, 0, 1},              /* melodic minor   */
     { 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0},              /* C whole tone    */
+    { 2, 1, 2, 1, 2, 1, 1, 2, 1, 3, 2, 1},              /* major pentatonic */
+    { 3, 0, 0, 2, 0, 2, 0, 3, 0, 0, 2, 0},              /* minor pentatonic */
 };
 
 const int c_scales_transpose_dn[c_scale_size][12] =
@@ -300,6 +313,8 @@ const int c_scales_transpose_dn[c_scale_size][12] =
     { -1, -0, -2, -1, 0, -2, 0, -2, -1, 0, 0, -3},      /* harmonic minor  */
     { -1, 0, -2, -1, 0, -2, 0, -2, 0, -2, 0, -2},       /* melodic minor   */
     { -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0},        /* C whole tone    */
+    { -3, -1, -2, -1, -2, -1, -1, -2, -1, -3, -1, -1},  /* major pentatonic */
+    { -2, 0, 0, -3, 0, -2, 0, -3, 0, 0, -2, 0},          /* minor pentatonic */
 };
 
 const int c_scales_symbol[c_scale_size][12] =
@@ -325,6 +340,8 @@ const char c_scales_text[c_scale_size][32] =
     "Harmonic Minor",
     "Melodic Minor",
     "Whole Tone",
+    "Major Pentatonic",
+    "Minor Pentatonic",
 };
 
 const char c_key_text[][3] =

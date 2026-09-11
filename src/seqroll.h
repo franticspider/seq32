@@ -40,7 +40,7 @@ class seqroll;
 struct FruitySeqRollInput
 {
     FruitySeqRollInput() : m_adding( false ), m_canadd( true ), m_erase_painting( false ),
-    m_drag_paste_start_pos()
+    m_alt_resize( false ), m_drag_paste_start_pos()
     {}
     bool on_button_press_event(GdkEventButton* a_ev, seqroll& ths);
     bool on_button_release_event(GdkEventButton* a_ev, seqroll& ths);
@@ -49,6 +49,7 @@ struct FruitySeqRollInput
     bool m_adding;
     bool m_canadd;
     bool m_erase_painting;
+    bool m_alt_resize;
     long m_drag_paste_start_pos[2];
 };
 
@@ -100,6 +101,7 @@ private:
     int          m_scale;
     int          m_chord;
     int          m_key;
+    bool         m_scale_lock;
 
     /* Vertical Zoom */
     int         m_key_y;
@@ -197,6 +199,8 @@ protected:
 public:
 
     bool on_key_press_event(GdkEventKey* a_p0); // called from seqedit
+    bool on_key_release_event(GdkEventKey* a_p0);
+    
     void reset();
     void redraw();
     void redraw_events();
@@ -209,6 +213,8 @@ public:
     void set_scale( int a_scale );
     void set_chord( int a_chord );
     void set_key( int a_key );
+    bool is_note_in_scale( int a_note ) const;
+    void set_scale_lock( bool a_state );
 
     void update_sizes();
     void update_background();
