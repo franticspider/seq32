@@ -59,6 +59,7 @@ perfroll::perfroll( perform *a_perf,
     m_moving(false),
     m_growing(false),
     m_grow_direction(false),
+    m_transport_dragging(false),
 
     have_button_press(false),
     transport_follow(true),
@@ -699,6 +700,34 @@ perfroll::redraw_dirty_sequences()
     }
 }
 
+void
+perfroll::set_transport_position(int a_x)
+{
+    long a_tick = 0;
+
+    if (a_x < 0)
+        a_x = 0;
+
+    snap_x(&a_x);
+    convert_x(a_x, &a_tick);
+
+    if (m_mainperf->is_jack_running())
+    {
+        m_mainperf->set_reposition();
+        m_mainperf->set_starting_tick(a_tick);
+        m_mainperf->position_jack(true, a_tick);
+    }
+    else
+    {
+        m_mainperf->set_reposition();
+        m_mainperf->set_starting_tick(a_tick);
+    }
+
+    m_have_stop_reposition = true;
+    queue_draw();
+}
+
+/*
 bool
 perfroll::on_button_press_event(GdkEventButton* a_ev)
 {
@@ -710,11 +739,51 @@ perfroll::on_button_press_event(GdkEventButton* a_ev)
     }
 
     return m_interaction->on_button_press_event(a_ev, *this);
+}*/
+bool
+perfroll::on_button_press_event(GdkEventButton* a_ev)
+{
+    if (a_ev->button == 1 &&
+        (a_ev->state & GDK_CONTROL_MASK))
+    {
+        m_transport_dragging = true;
+        set_transport_position((int) a_ev->x);
+        return true;
+    }
+
+    if(!trans_button_press)
+    {
+        transport_follow = m_mainperf->get_follow_transport();
+        m_mainperf->set_follow_transport(false);
+        trans_button_press = true;
+    }
+
+    return m_interaction->on_button_press_event(a_ev, *this);
 }
+
+/*bool
+perfroll::on_button_release_event(GdkEventButton* a_ev)
+{
+    bool result;
+    result = m_interaction->on_button_release_event(a_ev, *this);
+
+    m_mainperf->set_follow_transport(transport_follow);
+    trans_button_press = false;
+
+    return result;
+}*/
 
 bool
 perfroll::on_button_release_event(GdkEventButton* a_ev)
 {
+    if (m_transport_dragging && a_ev->button == 1)
+    {
+        m_transport_dragging = false;
+        m_mainperf->set_follow_transport(transport_follow);
+        trans_button_press = false;
+        return true;
+    }
+
     bool result;
     result = m_interaction->on_button_release_event(a_ev, *this);
 
@@ -835,9 +904,20 @@ perfroll::on_scroll_event( GdkEventScroll* a_ev )
     return true;
 }
 
+/*bool
+perfroll::on_motion_notify_event(GdkEventMotion* a_ev)
+{
+    return m_interaction->on_motion_notify_event(a_ev, *this);
+}*/
 bool
 perfroll::on_motion_notify_event(GdkEventMotion* a_ev)
 {
+    if (m_transport_dragging)
+    {
+        set_transport_position((int) a_ev->x);
+        return true;
+    }
+
     return m_interaction->on_motion_notify_event(a_ev, *this);
 }
 

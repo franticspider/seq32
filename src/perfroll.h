@@ -87,6 +87,7 @@ private:
     bool m_moving;
     bool m_growing;
     bool m_grow_direction;
+    bool m_transport_dragging;
 
     void on_realize();
     bool on_button_press_event(GdkEventButton* a_ev);
@@ -101,6 +102,7 @@ private:
 
     void convert_xy( int a_x, int a_y, long *a_ticks, int *a_seq);
     void convert_x( int a_x, long *a_ticks);
+    void set_transport_position(int a_x);
     void snap_x( int *a_x );
 
     void draw_sequence_on( int a_sequence );
