@@ -478,6 +478,36 @@ perfedit::on_key_press_event(GdkEventKey* a_ev)
         }
     }
 
+    
+    /* mark position of transport */
+     if (a_ev->keyval == GDK_KEY_m)
+    {
+        if (global_is_running)
+            return true;
+
+        long tick = m_mainperf->get_tick();
+        m_perfroll->snap_tick(&tick);
+
+        m_song_positions.push_back(tick);
+
+        std::sort(m_song_positions.begin(), m_song_positions.end());
+
+        /*todo(sjh): uncomment these if we need console printing
+        printf("Song positions:");
+        for (std::vector<long>::const_iterator i = m_song_positions.begin();
+             i != m_song_positions.end(); ++i)
+        {
+            printf(" %ld", *i);
+        }
+        printf("\n");
+        */
+
+        m_perfroll->redraw_all_tracks();
+
+        return true;
+    }
+
+
     /* Horizontal zoom */
     if (a_ev->keyval == GDK_KEY_Z)         /* zoom in              */
     {

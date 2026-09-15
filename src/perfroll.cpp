@@ -352,7 +352,27 @@ perfroll::draw_progress()
             m_surface_window->line_to(R_mark, m_window_y);
             m_surface_window->stroke();
         }
+        
+        /* Draw song position lines */
+        const std::vector<long>& song_positions =
+            m_perfedit->get_song_positions();
 
+        m_surface_window->set_source_rgb(1.0, 1.0, 0.0);
+        m_surface_window->set_line_width(3.0);
+
+        for (std::vector<long>::const_iterator i = song_positions.begin();
+             i != song_positions.end(); ++i)
+        {
+        
+            long tick_offset = m_4bar_offset * c_ppqn * 16;
+            int mark = (*i - tick_offset) / m_perf_scale_x;
+
+            m_surface_window->move_to(mark, 1.0);
+            m_surface_window->line_to(mark, m_window_y);
+            m_surface_window->stroke();
+        }
+
+        /* then... */
         if ( m_line_location > 0 )
         {
             /* Draw the tempo marker location line */
@@ -700,46 +720,7 @@ perfroll::redraw_dirty_sequences()
     }
 }
 
-void
-perfroll::set_transport_position(int a_x)
-{
-    long a_tick = 0;
 
-    if (a_x < 0)
-        a_x = 0;
-
-    snap_x(&a_x);
-    convert_x(a_x, &a_tick);
-
-    if (m_mainperf->is_jack_running())
-    {
-        m_mainperf->set_reposition();
-        m_mainperf->set_starting_tick(a_tick);
-        m_mainperf->position_jack(true, a_tick);
-    }
-    else
-    {
-        m_mainperf->set_reposition();
-        m_mainperf->set_starting_tick(a_tick);
-    }
-
-    m_have_stop_reposition = true;
-    queue_draw();
-}
-
-/*
-bool
-perfroll::on_button_press_event(GdkEventButton* a_ev)
-{
-    if(!trans_button_press) // to avoid double button press on normal seq32 method
-    {
-        transport_follow = m_mainperf->get_follow_transport();
-        m_mainperf->set_follow_transport(false);
-        trans_button_press = true;
-    }
-
-    return m_interaction->on_button_press_event(a_ev, *this);
-}*/
 bool
 perfroll::on_button_press_event(GdkEventButton* a_ev)
 {
@@ -761,26 +742,12 @@ perfroll::on_button_press_event(GdkEventButton* a_ev)
     return m_interaction->on_button_press_event(a_ev, *this);
 }
 
-/*bool
-perfroll::on_button_release_event(GdkEventButton* a_ev)
-{
-    bool result;
-    result = m_interaction->on_button_release_event(a_ev, *this);
-
-    m_mainperf->set_follow_transport(transport_follow);
-    trans_button_press = false;
-
-    return result;
-}*/
-
 bool
 perfroll::on_button_release_event(GdkEventButton* a_ev)
 {
     if (m_transport_dragging && a_ev->button == 1)
     {
         m_transport_dragging = false;
-        m_mainperf->set_follow_transport(transport_follow);
-        trans_button_press = false;
         return true;
     }
 
@@ -904,11 +871,6 @@ perfroll::on_scroll_event( GdkEventScroll* a_ev )
     return true;
 }
 
-/*bool
-perfroll::on_motion_notify_event(GdkEventMotion* a_ev)
-{
-    return m_interaction->on_motion_notify_event(a_ev, *this);
-}*/
 bool
 perfroll::on_motion_notify_event(GdkEventMotion* a_ev)
 {
@@ -927,7 +889,7 @@ perfroll::on_key_press_event(GdkEventKey* a_p0)
     /* Vertical zoom */
     if ( !(a_p0->state & GDK_CONTROL_MASK) )
     {
-        if (a_p0->keyval == GDK_KEY_V)         /* zoom in              */
+        if (a_p0->keyval == GDK_KEY_V)              /* zoom in              */
         {
             m_perfedit->set_vertical_zoom(m_vertical_zoom + c_vertical_zoom_step);
             return true;
@@ -943,6 +905,7 @@ perfroll::on_key_press_event(GdkEventKey* a_p0)
             return true;
         }
     }
+    
     
     if (a_p0->keyval == m_mainperf->m_key_pointer)         /* Move to mouse position */
     {
@@ -1023,13 +986,40 @@ perfroll::on_key_press_event(GdkEventKey* a_p0)
         return false;
 }
 
+void
+perfroll::set_transport_position(int a_x)
+{
+    long a_tick = 0;
+
+    if (a_x < 0)
+        a_x = 0;
+
+    snap_x(&a_x);
+    convert_x(a_x, &a_tick);
+
+    if (m_mainperf->is_jack_running())
+    {
+        m_mainperf->set_reposition();
+        m_mainperf->set_starting_tick(a_tick);
+        m_mainperf->position_jack(true, a_tick);
+    }
+    else
+    {
+        m_mainperf->set_reposition();
+        m_mainperf->set_starting_tick(a_tick);
+    }
+
+    m_have_stop_reposition = true;
+    queue_draw();
+}
+
 /* performs a 'snap' on x */
 void
 perfroll::snap_x( int *a_x )
 {
     // snap = number pulses to snap to
     // m_scale = number of pulses per pixel
-    //	so snap / m_scale  = number pixels to snap to
+    //so snap / m_scale  = number pixels to snap to
 
     int mod = (m_snap / m_perf_scale_x );
 
@@ -1044,6 +1034,22 @@ perfroll::convert_x( int a_x, long *a_tick )
 {
     long tick_offset = m_4bar_offset * c_ppqn * 16;
     *a_tick = a_x * m_perf_scale_x;
+    *a_tick += tick_offset;
+}
+
+void
+perfroll::snap_tick( long *a_tick )
+{
+    long tick_offset = m_4bar_offset * c_ppqn * 16;
+    int mod = (m_snap / m_perf_scale_x);
+
+    if (mod <= 0)
+        mod = 1;
+
+    long snap = mod * m_perf_scale_x;
+
+    *a_tick -= tick_offset;
+    *a_tick -= *a_tick % snap;
     *a_tick += tick_offset;
 }
 

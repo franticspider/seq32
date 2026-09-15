@@ -23,6 +23,8 @@
 
 #include <list>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 #include "sequence.h"
 #include "perform.h"
@@ -111,6 +113,9 @@ private:
     int m_snap;
     int m_bp_measure;
     int m_bw;
+    
+    /* store song positions */
+    std::vector<long> m_song_positions;
     
     /** From sequencer64
      *  Shows the current time into the song performance.
@@ -205,6 +210,11 @@ public:
     static bool zoom_check_vertical (float z)
     {
         return z >= c_perf_min_vertical_zoom && z <= c_perf_max_vertical_zoom;
+    }
+    
+    const std::vector<long>& get_song_positions() const
+    {
+        return m_song_positions;
     }
 
     void init_before_show ();

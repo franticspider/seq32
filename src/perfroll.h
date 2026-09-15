@@ -100,10 +100,10 @@ private:
 
     void on_size_allocate(Gtk::Allocation& );
 
-    void convert_xy( int a_x, int a_y, long *a_ticks, int *a_seq);
-    void convert_x( int a_x, long *a_ticks);
     void set_transport_position(int a_x);
     void snap_x( int *a_x );
+    void convert_x( int a_x, long *a_ticks);
+    void convert_xy( int a_x, int a_y, long *a_ticks, int *a_seq);
 
     void draw_sequence_on( int a_sequence );
     void draw_background_on( int a_sequence );
@@ -143,6 +143,8 @@ public:
     void fill_background_surface();
 
     void increment_size();
+    
+    void snap_tick( long *a_tick );
 
     void draw_progress();
 
