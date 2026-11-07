@@ -501,8 +501,9 @@ perfedit::on_key_press_event(GdkEventKey* a_ev)
         }
         printf("\n");
         */
-
+    
         m_perfroll->redraw_all_tracks();
+        m_perfroll->have_stopped_reposition();
 
         return true;
     }

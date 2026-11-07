@@ -2972,6 +2972,15 @@ void perform::input_func()
             {
                 if (m_master_bus.get_midi_event(&ev) )
                 {
+                
+                    //hadndling midi 'control' events
+                    unsigned char data[2] = {0, 0};
+                    ev.get_data(&data[0], &data[1]);
+
+                    printf("MIDI IN: status=%d data1=%d data2=%d\n",
+                        ev.get_status(), data[0], data[1]);
+                
+                
                     // only used when starting from the beginning of the song = 0
                     if (ev.get_status() == EVENT_MIDI_START)
                     {
