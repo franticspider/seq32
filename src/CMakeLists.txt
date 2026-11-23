@@ -33,6 +33,7 @@ set (ProgSources
     seqtime.cpp
     sequence.cpp
     tempo.cpp
+    tempo_utils.cpp
     tempopopup.cpp
     userfile.cpp
 )

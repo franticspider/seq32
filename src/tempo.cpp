@@ -23,6 +23,7 @@
 #include "pixmaps/tempo_marker.xpm"
 #include "pixmaps/stop_marker.xpm"
 #include "themes.h"
+#include "tempo_utils.h"
 
 
 tempo::tempo( perform *a_perf, perfedit *a_perf_edit, Glib::RefPtr<Adjustment> a_hadjust ) :
@@ -671,10 +672,9 @@ tempo::calculate_marker_start()
 }
 
 double
-tempo::pulse_length_us (double bpm, int ppqn)
+tempo::pulse_length_us(double bpm, int ppqn)
 {
-    double bw = (double) m_perfedit->get_bw();
-    return 60000000.0 / ppqn / bpm * ( bw / 4.0 );
+    return ::pulse_length_us(bpm, ppqn, m_perfedit->get_bw());
 }
 
 /* called by motion notify and when right mouse click for delete */

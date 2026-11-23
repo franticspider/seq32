@@ -32,6 +32,7 @@
 #include "perfroll.h"
 #include "perftime.h"
 #include "tempo.h"
+#include "tempo_utils.h"
 
 using namespace Gtk;
 
@@ -180,9 +181,9 @@ private:
     }
     
     inline double
-    pulse_length_us (double bpm, int ppqn)
+    pulse_length_us(double bpm, int ppqn)
     {
-        return 60000000.0 / ppqn / bpm * ( (double) m_bw / 4.0 );
+        return ::pulse_length_us(bpm, ppqn, m_bw);
     }
     
     std::string tick_to_timestring(long a_tick);
