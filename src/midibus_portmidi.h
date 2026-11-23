@@ -212,7 +212,7 @@ public:
 
     int poll_for_midi( );
     bool is_more_input( );
-    bool get_midi_event( event *a_in );
+    bool get_midi_event( event *a_in, bool *a_song_control = NULL );
     void set_sequence_input( bool a_state, sequence *a_seq );
     void dump_midi_input(event a_in);
 

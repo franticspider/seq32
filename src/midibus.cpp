@@ -843,6 +843,7 @@ mastermidibus::flush()
 
 /* fills the array with our buses */
 mastermidibus::mastermidibus() :
+m_song_control_port(-1),
 m_buses_out(),
 m_buses_in(),
 m_bus_announce(),
@@ -1003,6 +1004,27 @@ mastermidibus::init( )
                 }
             }
         } /* end loop for clients */
+    }
+
+    /* Dedicated input for playlist footswitch commands.  It is deliberately
+       separate from the normal "seq32 in" port so these notes cannot be
+       recorded or passed through as performance data. */
+    Glib::ustring song_control_name = global_client_name;
+    song_control_name += " song control";
+    m_song_control_port = snd_seq_create_simple_port(
+        m_alsa_seq,
+        song_control_name.c_str(),
+        SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
+        SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+
+    if (m_song_control_port < 0)
+    {
+        printf("Could not create song control MIDI input port\n");
+    }
+    else
+    {
+        printf("Created song control MIDI input port: %s (port %d)\n",
+               song_control_name.c_str(), m_song_control_port);
     }
 
     set_bpm( c_bpm );
@@ -1460,8 +1482,11 @@ mastermidibus::port_exit( int a_client, int a_port )
 }
 
 bool
-mastermidibus::get_midi_event( event *a_in )
+mastermidibus::get_midi_event( event *a_in, bool *a_song_control )
 {
+    if (a_song_control)
+        *a_song_control = false;
+
     lock();
 #ifdef HAVE_LIBASOUND
     snd_seq_event_t *ev;
@@ -1473,6 +1498,9 @@ mastermidibus::get_midi_event( event *a_in )
     unsigned char buffer[0x1000];
 
     snd_seq_event_input(m_alsa_seq, &ev);
+
+    if (a_song_control && m_song_control_port >= 0)
+        *a_song_control = (ev->dest.port == m_song_control_port);
 
     if (! global_manual_alsa_ports )
     {

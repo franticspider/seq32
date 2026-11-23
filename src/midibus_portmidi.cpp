@@ -706,8 +706,11 @@ mastermidibus::is_more_input( )
 }
 
 bool
-mastermidibus::get_midi_event( event *a_in )
+mastermidibus::get_midi_event( event *a_in, bool *a_song_control )
 {
+    if (a_song_control)
+        *a_song_control = false;
+
     lock();
 
     bool ret = false;

@@ -2970,107 +2970,145 @@ void perform::input_func()
         {
             do
             {
-                if (m_master_bus.get_midi_event(&ev) )
+                bool is_song_control = false;
+                if (m_master_bus.get_midi_event(&ev, &is_song_control) )
                 {
-                    // only used when starting from the beginning of the song = 0
-                    if (ev.get_status() == EVENT_MIDI_START)
+                    if (is_song_control)
                     {
-                        //printf("EVENT_MIDI_START\n");
-                        start(global_song_start_mode);
-                        m_midiclockrunning = true;
-                        m_usemidiclock = true;
-                        m_midiclocktick = 0;    // start at beginning of song
-                        m_midiclockpos = 0;     // start at beginning of song
-                    }
-                    // midi continue: start from midi song position
-                    // this will be sent immediately after  EVENT_MIDI_SONG_POS
-                    // and is used for start from other than beginning of the song,
-                    // or to start from previous location at EVENT_MIDI_STOP
-                    else if (ev.get_status() == EVENT_MIDI_CONTINUE)
-                    {
-                        //printf("EVENT_MIDI_CONTINUE\n");
-                        m_midiclockrunning = true;
-                        start(global_song_start_mode);
-                    }
-                    // should hold the stop position in case the next event is continue
-                    else if (ev.get_status() == EVENT_MIDI_STOP)
-                    {
-                        //printf("EVENT_MIDI_STOP\n");
-                        m_midiclockrunning = false;
-                        all_notes_off();
-                        inner_stop(true);        // true = m_usemidiclock = true, i.e. hold m_tick position(output_func)
-                        m_midiclockpos = m_tick; // set position to last location on stop - for continue
-                    }
-                    else if (ev.get_status() == EVENT_MIDI_CLOCK)
-                    {
-                        //printf("EVENT_MIDI_CLOCK - m_tick [%ld] \n", m_tick);
-                        if (m_midiclockrunning)
-                            m_midiclocktick += 8;
-                    }
-                    else if (ev.get_status() == EVENT_MIDI_SONG_POS)
-                    {
-                        unsigned char a, b;
-                        ev.get_data(&a, &b);
-
-                        m_midiclockpos = combine_bytes(a,b);
-
-                        /*
-                            http://www.blitter.com/~russtopia/MIDI/~jglatt/tech/midispec/ssp.htm
-
-                            Example: If a Song Position value of 8 is received,
-                            then a sequencer (or drum box) should cue playback to the
-                            third quarter note of the song.
-                            (8 MIDI beats * 6 MIDI clocks per MIDI beat = 48 MIDI Clocks.
-                            Since there are 24 MIDI Clocks in a quarter note,
-                            the first quarter occurs on a time of 0 MIDI Clocks,
-                            the second quarter note occurs upon the 24th MIDI Clock,
-                            and the third quarter note occurs on the 48th MIDI Clock).
-                         */
-
-                        m_midiclockpos *= 48;   // 8 MIDI beats * 6 MIDI clocks per MIDI beat = 48 MIDI Clocks.
-                        //printf("EVENT_MIDI_SONG_POS - m_midiclockpos[%ld]\n", m_midiclockpos);
-                    }
-
-                    /* filter system wide messages */
-                    if (ev.get_status() <= EVENT_SYSEX)
-                    {
-                        if( global_showmidi)
-                            ev.print();
-
-                        /* is there at least one sequence set ? */
-                        if (m_master_bus.is_dumping())
+                        /* The dedicated QjackCtl song-control port accepts
+                           only non-zero-velocity Note On messages. */
+                        if (ev.is_note_on() && ev.get_note_velocity() > 0)
                         {
-                            /* The true flag will limit the controls to start, stop
-                             * and  record only. The function returns a a bool flag
-                             * indicating whether the event was used or not. The flag
-                             * is used to exclude from recording the events that 
-                             * are used for control purposes and should not be 
-                             * recorded (dumping).  If the used event is a note on,
-                             * then the linked note off will also be excluded. */
-                            if(!check_midi_control(ev, true))
+                            switch (ev.get_note())
                             {
-                                ev.set_timestamp(m_tick);
+                            case 48: // lower C, D, E: start current playlist song
+                            case 50:
+                            case 52:
+                                if (!global_is_running)
+                                    start_playing();
+                                break;
 
-                                /* dump to it - possibly multiple sequences set */
-                                m_master_bus.dump_midi_input(ev);
+                            case 60: // middle C, D, E: stop
+                            case 62:
+                            case 64:
+                                if (global_is_running)
+                                    stop_playing();
+                                break;
+
+                            case 69: // upper A, B, C: next playlist song
+                            case 71:
+                            case 72:
+                                if (get_playlist_mode())
+                                    m_setjump = PLAYLIST_NEXT;
+                                break;
+
+                            default:
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // only used when starting from the beginning of the song = 0
+                        if (ev.get_status() == EVENT_MIDI_START)
+                        {
+                            //printf("EVENT_MIDI_START\n");
+                            start(global_song_start_mode);
+                            m_midiclockrunning = true;
+                            m_usemidiclock = true;
+                            m_midiclocktick = 0;    // start at beginning of song
+                            m_midiclockpos = 0;     // start at beginning of song
+                        }
+                        // midi continue: start from midi song position
+                        // this will be sent immediately after  EVENT_MIDI_SONG_POS
+                        // and is used for start from other than beginning of the song,
+                        // or to start from previous location at EVENT_MIDI_STOP
+                        else if (ev.get_status() == EVENT_MIDI_CONTINUE)
+                        {
+                            //printf("EVENT_MIDI_CONTINUE\n");
+                            m_midiclockrunning = true;
+                            start(global_song_start_mode);
+                        }
+                        // should hold the stop position in case the next event is continue
+                        else if (ev.get_status() == EVENT_MIDI_STOP)
+                        {
+                            //printf("EVENT_MIDI_STOP\n");
+                            m_midiclockrunning = false;
+                            all_notes_off();
+                            inner_stop(true);        // true = m_usemidiclock = true, i.e. hold m_tick position(output_func)
+                            m_midiclockpos = m_tick; // set position to last location on stop - for continue
+                        }
+                        else if (ev.get_status() == EVENT_MIDI_CLOCK)
+                        {
+                            //printf("EVENT_MIDI_CLOCK - m_tick [%ld] \n", m_tick);
+                            if (m_midiclockrunning)
+                                m_midiclocktick += 8;
+                        }
+                        else if (ev.get_status() == EVENT_MIDI_SONG_POS)
+                        {
+                            unsigned char a, b;
+                            ev.get_data(&a, &b);
+
+                            m_midiclockpos = combine_bytes(a,b);
+
+                            /*
+                                http://www.blitter.com/~russtopia/MIDI/~jglatt/tech/midispec/ssp.htm
+
+                                Example: If a Song Position value of 8 is received,
+                                then a sequencer (or drum box) should cue playback to the
+                                third quarter note of the song.
+                                (8 MIDI beats * 6 MIDI clocks per MIDI beat = 48 MIDI Clocks.
+                                Since there are 24 MIDI Clocks in a quarter note,
+                                the first quarter occurs on a time of 0 MIDI Clocks,
+                                the second quarter note occurs upon the 24th MIDI Clock,
+                                and the third quarter note occurs on the 48th MIDI Clock).
+                             */
+
+                            m_midiclockpos *= 48;   // 8 MIDI beats * 6 MIDI clocks per MIDI beat = 48 MIDI Clocks.
+                            //printf("EVENT_MIDI_SONG_POS - m_midiclockpos[%ld]\n", m_midiclockpos);
+                        }
+
+                        /* filter system wide messages */
+                        if (ev.get_status() <= EVENT_SYSEX)
+                        {
+                            if( global_showmidi)
+                                ev.print();
+
+                            /* is there at least one sequence set ? */
+                            if (m_master_bus.is_dumping())
+                            {
+                                /* The true flag will limit the controls to start, stop
+                                 * and  record only. The function returns a a bool flag
+                                 * indicating whether the event was used or not. The flag
+                                 * is used to exclude from recording the events that 
+                                 * are used for control purposes and should not be 
+                                 * recorded (dumping).  If the used event is a note on,
+                                 * then the linked note off will also be excluded. */
+                                if(!check_midi_control(ev, true))
+                                {
+                                    ev.set_timestamp(m_tick);
+
+                                    /* dump to it - possibly multiple sequences set */
+                                    m_master_bus.dump_midi_input(ev);
+                                }
+                            }
+
+                            /* use it to control our sequencer */
+                            else
+                            {
+                                (void)check_midi_control(ev, false);
                             }
                         }
 
-                        /* use it to control our sequencer */
-                        else
+                        if (ev.get_status() == EVENT_SYSEX)
                         {
-                            (void)check_midi_control(ev, false);
+                            if (global_showmidi)
+                                ev.print();
+
+                            if (global_pass_sysex)
+                                m_master_bus.sysex(&ev);
                         }
-                    }
-
-                    if (ev.get_status() == EVENT_SYSEX)
-                    {
-                        if (global_showmidi)
-                            ev.print();
-
-                        if (global_pass_sysex)
-                            m_master_bus.sysex(&ev);
-                    }
+                    } // not the dedicated song-control port
                 }
             }
             while (m_master_bus.is_more_input());
